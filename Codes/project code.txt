@@ -1,0 +1,314 @@
+#include <Servo.h>
+
+Servo myservo;
+
+/*-------defining Inputs------*/
+#define FsLeft A1      // left flame sensor
+#define FsRight A0     // right flame sensor
+#define FsCenter A2    // center flame sensor
+#define CO_Sense A4    // gas sensor
+#define Temp_Sense A3  // temperature sensor
+ 
+/*-------defining Outputs------*/
+#define LM1  11           // left motor
+#define LM2  10           // left motor
+#define RM1  6            // right motor
+#define RM2  5            // right motor
+#define PUMP A5
+#define BUZZER 13 
+#define TRIG_PIN1 2       //right trigger
+#define ECHO_PIN1 3       //right echo
+#define TRIG_PIN2 7       //left trigger
+#define ECHO_PIN2 4       //left echo
+#define TRIG_PIN3 8       //center trigger
+#define ECHO_PIN3 12      //center echo
+
+int pos, Left_Distance, Right_Distance, Center_Distance = 0;
+//int pos, Left_Distance, Right_Distance, Middle_Distance;
+int fire, Fdistance1, Fdistance2, Fdistance3;
+long duration;
+
+void brake()
+{
+  Serial.println("Brake");
+  digitalWrite(LM1,LOW);
+  digitalWrite(LM2,LOW);
+  digitalWrite(RM1,LOW);
+  digitalWrite(RM2,LOW);
+  delay(800);
+}
+    
+void rotate()
+{
+  Serial.println("Rotate");
+  digitalWrite(LM1,HIGH);
+  digitalWrite(LM2,LOW);
+  digitalWrite(RM1,HIGH);
+  digitalWrite(RM2,LOW);   
+}
+    
+void left()
+{
+  Serial.println("Left");
+  digitalWrite(LM1,LOW);
+  digitalWrite(LM2,HIGH);
+  digitalWrite(RM1,HIGH);
+  digitalWrite(RM2,LOW);
+}
+
+  
+void right()
+{
+  Serial.println("Right");
+  digitalWrite(LM1,HIGH);
+  digitalWrite(LM2,LOW);
+  digitalWrite(RM1,LOW);
+  digitalWrite(RM2,HIGH);
+}
+
+void forward()
+{
+  Serial.println("Forward");
+  digitalWrite(LM1,LOW);
+  digitalWrite(LM2,HIGH);
+  digitalWrite(RM1,LOW);
+  digitalWrite(RM2,HIGH);
+}
+
+void backward()
+{
+  Serial.println("Forward");
+  digitalWrite(LM1,LOW);
+  digitalWrite(LM2,HIGH);
+  digitalWrite(RM1,LOW);
+  digitalWrite(RM2,HIGH);
+  
+}
+
+int Left_Distance_check() //checks distance from the obstacle on the left
+{
+  digitalWrite(TRIG_PIN2, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN2, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN2, LOW);
+  float duration = pulseIn(ECHO_PIN2, HIGH);
+  delay(10);
+
+  Fdistance1 = (duration/2) / 29.1; //converting to cm
+  Serial.print("Left distance: ");
+  Serial.print(Fdistance1);
+  Serial.println(" cm");
+  
+}
+
+int Center_Distance_check() //checks distance from the obstacle on the center
+{
+  digitalWrite(TRIG_PIN3, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN3, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN3, LOW);
+  float duration = pulseIn(ECHO_PIN3, HIGH);
+  delay(10);
+
+  Fdistance2 = (duration/2) / 29.1; //converting to cm
+  Serial.print("Center distance: ");
+  Serial.print(Fdistance2);
+  Serial.println(" cm");
+  
+}
+
+int Right_Distance_check()  //checks distance from the obstacle on the right
+{
+  digitalWrite(TRIG_PIN1, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN1, HIGH);
+  delayMicroseconds(20);
+  digitalWrite(TRIG_PIN1, LOW);
+  float duration = pulseIn(ECHO_PIN1, HIGH);
+  delay(10);
+
+  Fdistance3 = (duration/2) / 29.1; //converting to cm
+  Serial.print("Right distance: ");
+  Serial.print(Fdistance3);
+  Serial.println(" cm");
+  
+}
+
+void put_off_fire() //extinguish the fire
+{
+  delay (500);
+  brake();
+  digitalWrite(PUMP, HIGH);
+  delay(500);
+  
+  for (pos = 50; pos <= 130; pos += 2) 
+  { 
+    myservo.write(pos); 
+    delay(10);  
+  }
+  for (pos = 130; pos >= 50; pos -= 2) 
+  { 
+    myservo.write(pos); 
+    delay(10);
+  }
+
+  digitalWrite(PUMP,LOW);
+  myservo.write(90);
+  fire=false;
+}
+
+
+void setup() 
+{
+ // put your setup code here, to run once:
+  pinMode(ECHO_PIN1,INPUT);
+  pinMode(ECHO_PIN2,INPUT);
+  pinMode(ECHO_PIN3,INPUT);
+  pinMode(TRIG_PIN1,OUTPUT);
+  pinMode(TRIG_PIN2,OUTPUT);
+  pinMode(TRIG_PIN3,OUTPUT);
+  pinMode(LM1,OUTPUT);
+  pinMode(LM2,OUTPUT);
+  pinMode(RM1,OUTPUT);
+  pinMode(RM2,OUTPUT);
+  pinMode(FsCenter,INPUT);
+  pinMode(FsLeft,INPUT);
+  pinMode(FsRight,INPUT);
+  pinMode(BUZZER,OUTPUT);
+  pinMode(PUMP,OUTPUT);
+  pinMode(CO_Sense,INPUT);
+  pinMode(Temp_Sense,INPUT);
+  
+  brake();
+  myservo.attach(9);
+  myservo.write(90);
+  Serial.begin(9600);
+}
+
+void loop() 
+{
+  // OBSTACLE AVOIDING SECTION
+  Center_Distance_check();
+  Right_Distance_check();
+  Left_Distance_check();
+
+
+ if(Fdistance2 <= 10)
+  {
+    if(Fdistance3 > Fdistance1)
+    {
+      if((Fdistance3<=30) && (Fdistance1<=30))
+      { 
+        brake();
+       // delay(200);
+        backward();
+       // delay(1000);
+      }
+      else
+      {
+        right();
+        //delay(2000);  
+      }
+    }
+    
+    else if (Fdistance3 < Fdistance1)
+    {
+      if((Fdistance3<=30) && (Fdistance1<=30))
+      {
+        brake();
+        //delay(2000);
+        backward();
+       // delay(3000);
+      }
+      else
+      {
+        left();
+        //delay(2000);
+      }
+    }   
+  }
+  
+  else if (Fdistance3<=15)
+  {
+    left();
+   // delay(2000);
+  }
+
+  else if (Fdistance1<=15)
+  {
+    right();
+    //delay(2000);
+  }
+  
+  else
+  {
+    Serial.println("all clear");
+    forward();
+  }
+
+
+
+  
+  //FIRE EXTINGUISHING SECTION
+  myservo.write(90);   
+ 
+    if (digitalRead(FsLeft) == 1 && digitalRead(FsRight) == 1 && digitalRead(FsCenter) == 1) //checks sensors for fire. 
+    {
+      Serial.println("No fire");
+      brake();
+    }
+    
+    else if (digitalRead(FsCenter) == 0) //fire in front 
+    {
+      Serial.println("Fire ahead");
+      digitalWrite(BUZZER,HIGH);       
+      forward();
+      delay(2000);
+      brake();
+    }
+    
+    else if (digitalRead(FsLeft) == 0) //fire to the left
+    {
+      Serial.println("Fire on the left");
+      digitalWrite(BUZZER,HIGH);
+      left();
+    }
+    
+    else if (digitalRead(FsRight) == 0) //fire to the right
+    {
+      Serial.println("Fire on the right");
+      digitalWrite(BUZZER,HIGH);
+      right();
+    }
+    
+  delay(300);//change this value to increase the distance
+ 
+     while (fire == 1)
+     {
+      put_off_fire();
+     }  
+
+
+  // TEMPERATURE MONITORING SECTION
+  // read input from temperature sensor
+  float TempPin = analogRead(Temp_Sense);
+  float Temp_SenseValue = ((TempPin/1024)*5000)/10;
+
+  // prints out read value
+  Serial.print("Temperature: ");
+  Serial.print(Temp_SenseValue);
+  Serial.println("*C");
+  delay(2000);
+
+
+//CARBON-MONOXIDE LEVEL MONITORING
+  // read input on analog input
+  int CO_SenseValue = analogRead(CO_Sense);
+
+  // prints out read value
+  Serial.print("CO_Level: ");
+  Serial.println(CO_SenseValue);
+  delay(2000);
+}
