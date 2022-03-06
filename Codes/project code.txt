@@ -302,7 +302,7 @@ void loop()
   Serial.println("*C");
   delay(2000);
 
-
+// This last section is still under testing and open to input
 //CARBON-MONOXIDE LEVEL MONITORING
   // read input on analog input
   int CO_SenseValue = analogRead(CO_Sense);
